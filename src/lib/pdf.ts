@@ -18,6 +18,15 @@ function canvasToDataUrl(canvas: HTMLCanvasElement): string {
   return canvas.toDataURL("image/jpeg", JPEG_QUALITY);
 }
 
+export function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 export async function rasterizePdf(file: File): Promise<PageImage[]> {
   const pdfjsLib = await loadPdfjs();
   const buffer = await file.arrayBuffer();
@@ -50,12 +59,7 @@ export async function rasterizePdf(file: File): Promise<PageImage[]> {
 }
 
 export async function rasterizeImageFile(file: File): Promise<PageImage[]> {
-  const dataUrl = await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+  const dataUrl = await fileToDataUrl(file);
 
   const dims = await new Promise<{ width: number; height: number }>((resolve, reject) => {
     const img = new Image();

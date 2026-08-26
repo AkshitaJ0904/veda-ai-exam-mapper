@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cosineSimilarity, embedTexts, generateJson } from "@/lib/gemini";
 import { gradingSchema, rubricsSchema } from "@/lib/schemas";
+import { mapWithConcurrency } from "@/lib/utils";
 import {
   DEFAULT_MAX_MARKS,
   type ExtractedQuestion,
@@ -12,7 +13,17 @@ import {
   type Verdict,
 } from "@/lib/types";
 
-export const maxDuration = 90;
+export const maxDuration = 300;
+
+const BATCH_SIZE = 10;
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const result: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    result.push(items.slice(i, i + size));
+  }
+  return result;
+}
 
 const RUBRIC_SYSTEM_INSTRUCTION = `You are an exam rubric designer. For each question given (by itself, without seeing any student's answer, so the rubric stays unbiased), produce:
 - modelAnswerSummary: a concise correct-answer summary (2-4 sentences, or bullet-style facts) covering what a full-marks answer must contain.
@@ -44,16 +55,16 @@ export async function POST(req: NextRequest) {
       maxMarksResolved: q.maxMarks ?? DEFAULT_MAX_MARKS,
     }));
 
-    const rubricResult = await generateJson<{
-      rubrics: { key: string; modelAnswerSummary: string; criteria: RubricCriterion[] }[];
-    }>({
-      contents: JSON.stringify(
-        withResolvedMarks.map((q) => ({ key: q.key, text: q.text, maxMarks: q.maxMarksResolved })),
-      ),
-      schema: rubricsSchema,
-      systemInstruction: RUBRIC_SYSTEM_INSTRUCTION,
-    });
-    const rubricByKey = new Map(rubricResult.rubrics.map((r) => [r.key, r]));
+    const rubricBatches = await mapWithConcurrency(chunk(withResolvedMarks, BATCH_SIZE), 3, (batch) =>
+      generateJson<{
+        rubrics: { key: string; modelAnswerSummary: string; criteria: RubricCriterion[] }[];
+      }>({
+        contents: JSON.stringify(batch.map((q) => ({ key: q.key, text: q.text, maxMarks: q.maxMarksResolved }))),
+        schema: rubricsSchema,
+        systemInstruction: RUBRIC_SYSTEM_INSTRUCTION,
+      }),
+    );
+    const rubricByKey = new Map(rubricBatches.flatMap((r) => r.rubrics).map((r) => [r.key, r]));
 
     const answered = withResolvedMarks.filter((q) => q.answer && q.answer.text.trim().length > 0);
     const unanswered = withResolvedMarks.filter((q) => !q.answer || q.answer.text.trim().length === 0);
@@ -77,22 +88,25 @@ export async function POST(req: NextRequest) {
       { marksAwarded: number; verdict: Verdict; feedback: string }
     >();
     if (answered.length > 0) {
-      const gradingInput = answered.map((q) => ({
-        key: q.key,
-        text: q.text,
-        maxMarks: q.maxMarksResolved,
-        rubric: rubricByKey.get(q.key)?.criteria ?? [],
-        answerText: q.answer!.text,
-        semanticSimilarity: semanticByKey.get(q.key) ?? 0,
-      }));
-      const gradingResult = await generateJson<{
-        grades: { key: string; marksAwarded: number; verdict: Verdict; feedback: string }[];
-      }>({
-        contents: JSON.stringify(gradingInput),
-        schema: gradingSchema,
-        systemInstruction: GRADING_SYSTEM_INSTRUCTION,
-      });
-      gradesByKey = new Map(gradingResult.grades.map((g) => [g.key, g]));
+      const gradingBatches = await mapWithConcurrency(chunk(answered, BATCH_SIZE), 3, (batch) =>
+        generateJson<{
+          grades: { key: string; marksAwarded: number; verdict: Verdict; feedback: string }[];
+        }>({
+          contents: JSON.stringify(
+            batch.map((q) => ({
+              key: q.key,
+              text: q.text,
+              maxMarks: q.maxMarksResolved,
+              rubric: rubricByKey.get(q.key)?.criteria ?? [],
+              answerText: q.answer!.text,
+              semanticSimilarity: semanticByKey.get(q.key) ?? 0,
+            })),
+          ),
+          schema: gradingSchema,
+          systemInstruction: GRADING_SYSTEM_INSTRUCTION,
+        }),
+      );
+      gradesByKey = new Map(gradingBatches.flatMap((r) => r.grades).map((g) => [g.key, g]));
     }
 
     const graded: GradedQuestion[] = withResolvedMarks.map((q) => {

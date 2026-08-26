@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateJson, imagePart, createUserContent } from "@/lib/gemini";
+import { generateJson, filePart, createUserContent } from "@/lib/gemini";
 import { questionsSchema } from "@/lib/schemas";
-import type { ExtractedQuestion, PageImage } from "@/lib/types";
+import type { ExtractedQuestion } from "@/lib/types";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
-const SYSTEM_INSTRUCTION = `You are an exam question-paper parser. You will be given images of every page of a printed question paper, in page order.
+const SYSTEM_INSTRUCTION = `You are an exam question-paper parser. You will be given the full question paper as a single document (it may span many pages), in page order.
 
 Extract every question in the exact order they appear on the page, including every labelled sub-part (e.g. 11(a), 11(b)) as a SEPARATE entry in the output list. Preserve the original printed numbering/labels exactly as printed — never renumber, never invent numbering that isn't printed.
 
@@ -20,13 +20,15 @@ Output strictly as JSON matching the provided schema. Do not skip any question.`
 
 export async function POST(req: NextRequest) {
   try {
-    const { pages } = (await req.json()) as { pages: PageImage[] };
-    if (!pages?.length) {
-      return NextResponse.json({ error: "No pages provided" }, { status: 400 });
+    const { file } = (await req.json()) as { file: { dataUrl: string } };
+    if (!file?.dataUrl) {
+      return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    const parts = pages.flatMap((p) => [`Page ${p.page}:`, imagePart(p.dataUrl)]);
-    const contents = createUserContent(parts);
+    const contents = createUserContent([
+      "Extract all questions from this question paper.",
+      filePart(file.dataUrl),
+    ]);
 
     const result = await generateJson<{ questions: ExtractedQuestion[] }>({
       contents,

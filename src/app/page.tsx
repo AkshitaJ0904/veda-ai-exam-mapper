@@ -6,8 +6,9 @@ import { TopBar } from "@/components/TopBar";
 import { UploadScreen } from "@/components/UploadScreen";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { MappingScreen } from "@/components/MappingScreen";
-import { rasterizeFile } from "@/lib/pdf";
+import { fileToDataUrl, rasterizeFile } from "@/lib/pdf";
 import { questionKey } from "@/lib/mapping";
+import { mapWithConcurrency } from "@/lib/utils";
 import type {
   AnswerBlock,
   ExtractedQuestion,
@@ -45,24 +46,20 @@ export default function Home() {
     setStage("loading");
     try {
       setLoadingMessage("Reading files…");
-      const [questionPages, answerPages] = await Promise.all([
-        rasterizeFile(questionFile),
+      const [questionDataUrl, answerPages] = await Promise.all([
+        fileToDataUrl(questionFile),
         rasterizeFile(answerFile),
       ]);
 
       setLoadingMessage("Extracting questions…");
       const { questions } = await postJson<{ questions: ExtractedQuestion[] }>(
         "/api/extract-questions",
-        { pages: questionPages },
+        { file: { dataUrl: questionDataUrl } },
       );
 
       setLoadingMessage("Extracting handwritten answers…");
-      const blockLists = await Promise.all(
-        answerPages.map((page) =>
-          postJson<{ blocks: AnswerBlock[] }>("/api/extract-answers", { page }).then(
-            (r) => r.blocks,
-          ),
-        ),
+      const blockLists = await mapWithConcurrency(answerPages, 4, (page) =>
+        postJson<{ blocks: AnswerBlock[] }>("/api/extract-answers", { page }).then((r) => r.blocks),
       );
       const blocks = blockLists.flat();
 

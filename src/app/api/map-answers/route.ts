@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateJson } from "@/lib/gemini";
 import { mapAssignmentsSchema } from "@/lib/schemas";
-import { buildQuestionKeySet, normalizeLabel, questionKey } from "@/lib/mapping";
+import {
+  buildQuestionKeySet,
+  isBareHeadingBlock,
+  isBareNumber,
+  normalizeLabel,
+  numericPrefix,
+  questionKey,
+} from "@/lib/mapping";
+import { mapWithConcurrency } from "@/lib/utils";
 import type {
   AnswerBlock,
   ExtractedQuestion,
@@ -10,7 +18,17 @@ import type {
   UnmatchedAnswerBlock,
 } from "@/lib/types";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
+
+const BLOCK_BATCH_SIZE = 20;
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const result: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    result.push(items.slice(i, i + size));
+  }
+  return result;
+}
 
 const SYSTEM_INSTRUCTION = `You are matching handwritten answer blocks from a student's answer sheet to the questions they answer.
 
@@ -31,41 +49,85 @@ export async function POST(req: NextRequest) {
     const keySet = buildQuestionKeySet(questions);
     const matchedByKey = new Map<QuestionKey, { block: AnswerBlock; confidence: MappedAnswer["matchConfidence"] }[]>();
     const unresolved: AnswerBlock[] = [];
+    const unmatched: UnmatchedAnswerBlock[] = [];
+
+    // Students often write a bare "Ans 1" heading once, then just "(i)", "(ii)", ...
+    // for each sub-part without repeating "1" — carry the last-seen main number
+    // forward (in block reading order) so a bare sub-part label like "(ii)" can
+    // still resolve to "1ii" rather than falling through to the LLM residual pass.
+    let lastMainNumber: string | null = null;
+    // A continuation of a multi-page answer often carries NO label at all on the
+    // next page. If an unlabelled block is the very first block on a page, and
+    // the last successful match was on the immediately preceding page, treat it
+    // as continuing that same answer — but only in that narrow position, so an
+    // unrelated unlabelled aside elsewhere on the page is left alone.
+    let lastMatchedKey: string | null = null;
+    let lastMatchedPage: number | null = null;
+    let prevBlockPage: number | null = null;
 
     for (const block of blocks ?? []) {
       const normalized = normalizeLabel(block.questionLabelSeen);
-      if (normalized && keySet.has(normalized)) {
-        const list = matchedByKey.get(normalized) ?? [];
-        list.push({ block, confidence: "explicit" });
-        matchedByKey.set(normalized, list);
+      const isFirstOnItsPage = block.page !== prevBlockPage;
+      let matchedKey: string | null = null;
+      let confidence: MappedAnswer["matchConfidence"] = "explicit";
+
+      if (normalized) {
+        if (keySet.has(normalized)) {
+          matchedKey = normalized;
+        } else if (lastMainNumber && keySet.has(lastMainNumber + normalized)) {
+          matchedKey = lastMainNumber + normalized;
+        }
+
+        if (isBareNumber(normalized)) {
+          lastMainNumber = normalized;
+        } else if (matchedKey) {
+          lastMainNumber = numericPrefix(matchedKey) ?? lastMainNumber;
+        }
+      } else if (isFirstOnItsPage && lastMatchedKey && lastMatchedPage === block.page - 1) {
+        matchedKey = lastMatchedKey;
+        confidence = "high";
+      }
+
+      if (matchedKey) {
+        const list = matchedByKey.get(matchedKey) ?? [];
+        list.push({ block, confidence });
+        matchedByKey.set(matchedKey, list);
+        lastMatchedKey = matchedKey;
+        lastMatchedPage = block.page;
+      } else if (isBareHeadingBlock(block.questionLabelSeen, block.transcribedText)) {
+        // e.g. a block that's just "Ans 1." with no actual answer content —
+        // never send this to the LLM matcher, which may otherwise guess an
+        // assignment for it rather than leaving it correctly unmatched.
+        unmatched.push({ page: block.page, text: block.transcribedText, bbox: block.bbox });
       } else {
         unresolved.push(block);
       }
+      prevBlockPage = block.page;
     }
-
-    const unmatched: UnmatchedAnswerBlock[] = [];
 
     if (unresolved.length > 0) {
       const stillNeeded = questions.filter((q) => !matchedByKey.has(questionKey(q.number, q.subpart)));
       const candidateQuestions = stillNeeded.length > 0 ? stillNeeded : questions;
 
-      const llmInput = {
-        blocks: unresolved.map((b) => ({ id: b.id, text: b.transcribedText.slice(0, 1500) })),
-        candidateQuestions: candidateQuestions.map((q) => ({
-          key: questionKey(q.number, q.subpart),
-          text: q.text.slice(0, 1000),
-        })),
-      };
+      const candidatesForPrompt = candidateQuestions.map((q) => ({
+        key: questionKey(q.number, q.subpart),
+        text: q.text.slice(0, 1000),
+      }));
 
-      const result = await generateJson<{
-        assignments: { blockId: string; questionKey: string | null; confidence: "high" | "medium" | "low" }[];
-      }>({
-        contents: JSON.stringify(llmInput),
-        schema: mapAssignmentsSchema,
-        systemInstruction: SYSTEM_INSTRUCTION,
-      });
+      const batches = await mapWithConcurrency(chunk(unresolved, BLOCK_BATCH_SIZE), 3, (blockBatch) =>
+        generateJson<{
+          assignments: { blockId: string; questionKey: string | null; confidence: "high" | "medium" | "low" }[];
+        }>({
+          contents: JSON.stringify({
+            blocks: blockBatch.map((b) => ({ id: b.id, text: b.transcribedText.slice(0, 1500) })),
+            candidateQuestions: candidatesForPrompt,
+          }),
+          schema: mapAssignmentsSchema,
+          systemInstruction: SYSTEM_INSTRUCTION,
+        }),
+      );
 
-      const assignmentByBlockId = new Map(result.assignments.map((a) => [a.blockId, a]));
+      const assignmentByBlockId = new Map(batches.flatMap((r) => r.assignments).map((a) => [a.blockId, a]));
 
       for (const block of unresolved) {
         const assignment = assignmentByBlockId.get(block.id);
