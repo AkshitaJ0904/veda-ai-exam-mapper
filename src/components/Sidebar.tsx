@@ -4,9 +4,10 @@ import {
   ChevronsRight,
   ClipboardList,
   FileText,
-  ImageIcon,
   LayoutGrid,
+  PanelLeft,
   PieChart,
+  Presentation,
   School,
   Settings,
   Sparkles,
@@ -14,7 +15,7 @@ import {
 
 const NAV_ITEMS = [
   { icon: LayoutGrid, label: "Home" },
-  { icon: ImageIcon, label: "My Classroom" },
+  { icon: Presentation, label: "My Classroom" },
   { icon: FileText, label: "Assignments" },
   { icon: ClipboardList, label: "Exams", active: true },
   { icon: PieChart, label: "My Library" },
@@ -24,18 +25,24 @@ export function Sidebar({
   className = "",
   collapsed = false,
   onExpand,
+  onCollapse,
 }: {
   className?: string;
   collapsed?: boolean;
   onExpand?: () => void;
+  onCollapse?: () => void;
 }) {
   if (collapsed) {
     return (
       <aside
         className={`hidden lg:flex w-[76px] shrink-0 flex-col items-center gap-2 bg-white border-r border-neutral-200 py-6 ${className}`}
       >
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-900">
-          <Sparkles className="h-[18px] w-[18px] text-orange-400" />
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-900 text-white font-bold text-lg">
+          V
+        </div>
+
+        <div className="mt-4 flex h-10 w-10 items-center justify-center rounded-full border-2 border-orange-400 bg-neutral-900">
+          <Sparkles className="h-[18px] w-[18px] text-white" />
         </div>
 
         <nav className="mt-4 flex flex-1 flex-col items-center gap-2">
@@ -54,7 +61,10 @@ export function Sidebar({
           ))}
         </nav>
 
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-700" title="Delhi Public School">
+        <div
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"
+          title="Delhi Public School"
+        >
           <School className="h-[18px] w-[18px]" />
         </div>
         <button
@@ -72,15 +82,24 @@ export function Sidebar({
     <aside
       className={`hidden lg:flex w-[280px] shrink-0 flex-col bg-white border-r border-neutral-200 px-5 py-6 ${className}`}
     >
-      <div className="flex items-center gap-2 px-1">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-900 text-white font-bold text-lg">
-          V
+      <div className="flex items-center justify-between px-1">
+        <div className="flex items-center gap-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-900 text-white font-bold text-lg">
+            V
+          </div>
+          <span className="text-lg font-bold text-neutral-900">VedaAI</span>
         </div>
-        <span className="text-lg font-bold text-neutral-900">VedaAI</span>
+        <button
+          onClick={onCollapse}
+          aria-label="Collapse sidebar"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 hover:bg-neutral-50 hover:text-neutral-700"
+        >
+          <PanelLeft className="h-[18px] w-[18px]" />
+        </button>
       </div>
 
       <button className="mt-6 flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-neutral-900 to-neutral-800 px-4 py-3 text-sm font-medium text-white shadow-sm border-2 border-orange-400">
-        <Sparkles className="h-4 w-4 text-orange-400" />
+        <Sparkles className="h-4 w-4 text-white" />
         AI Teacher&apos;s Toolkit
       </button>
 
