@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { ArrowRight, BookOpen, Clock, FileText, GraduationCap, MessageCircle, Settings, Upload, X } from "lucide-react";
+import Image from "next/image";
+import { ArrowRight, BookOpen, Clock, FileText, MessageCircle, Settings, Upload, X } from "lucide-react";
 import { formatBytes } from "@/lib/utils";
 import { getPageCount } from "@/lib/pdf";
 
@@ -150,8 +151,8 @@ export function UploadScreen({
       <p className="mt-3 text-sm text-neutral-500 sm:text-base">Upload both files to get started</p>
 
       <div className="relative my-10 flex h-32 w-32 items-center justify-center rounded-full bg-gradient-to-b from-orange-100 to-orange-50/60">
-        <div className="flex h-24 w-24 items-center justify-center rounded-full border-4 border-white bg-gradient-to-b from-neutral-100 to-neutral-50 shadow-sm">
-          <GraduationCap className="h-10 w-10 text-orange-500" />
+        <div className="relative h-24 w-24 overflow-hidden rounded-full border-4 border-white shadow-sm">
+          <Image src="/mascot.jpg" alt="" fill sizes="96px" className="object-cover" priority />
         </div>
         <span className="absolute -top-1 right-1 flex h-7 w-7 items-center justify-center rounded-full bg-white text-orange-500 shadow-md ring-1 ring-orange-100">
           <Clock className="h-3.5 w-3.5" />
