@@ -124,14 +124,13 @@ export function AnswerViewer({
       <div ref={containerRef} className="flex-1 space-y-6 overflow-auto p-6">
         {pages.map((page) => (
           <div key={page.page} className="mx-auto" style={{ width: `${zoom}%`, maxWidth: "none" }}>
-            <p className="mb-1.5 text-xs font-medium text-neutral-500">Page {page.page}</p>
             <div
               ref={(el) => {
                 if (el) pageRefs.current.set(page.page, el);
                 else pageRefs.current.delete(page.page);
               }}
               data-page={page.page}
-              className="relative bg-white shadow-xl"
+              className="relative overflow-hidden rounded-lg bg-white shadow-xl"
             >
               {/* eslint-disable-next-line @next/next/no-img-element -- data URL, variable size, already client-rasterized */}
               <img

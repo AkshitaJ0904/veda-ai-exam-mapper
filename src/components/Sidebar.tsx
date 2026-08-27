@@ -7,6 +7,7 @@ import {
   ImageIcon,
   LayoutGrid,
   PieChart,
+  School,
   Settings,
   Sparkles,
 } from "lucide-react";
@@ -53,8 +54,8 @@ export function Sidebar({
           ))}
         </nav>
 
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-700">
-          DPS
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-700" title="Delhi Public School">
+          <School className="h-[18px] w-[18px]" />
         </div>
         <button
           onClick={onExpand}
@@ -78,7 +79,7 @@ export function Sidebar({
         <span className="text-lg font-bold text-neutral-900">VedaAI</span>
       </div>
 
-      <button className="mt-6 flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-neutral-900 to-neutral-800 px-4 py-3 text-sm font-medium text-white shadow-sm border border-orange-400/40">
+      <button className="mt-6 flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-neutral-900 to-neutral-800 px-4 py-3 text-sm font-medium text-white shadow-sm border-2 border-orange-400">
         <Sparkles className="h-4 w-4 text-orange-400" />
         AI Teacher&apos;s Toolkit
       </button>
@@ -109,8 +110,8 @@ export function Sidebar({
           Settings
         </a>
         <div className="flex items-center gap-3 rounded-xl bg-neutral-50 px-3 py-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-semibold text-emerald-700">
-            DPS
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+            <School className="h-[18px] w-[18px]" />
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-neutral-900">Delhi Public School</p>

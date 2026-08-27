@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { ArrowRight, BookOpen, Clock, FileText, GraduationCap, MessageCircle, Upload, X } from "lucide-react";
+import { ArrowRight, BookOpen, Clock, FileText, GraduationCap, MessageCircle, Settings, Upload, X } from "lucide-react";
 import { formatBytes } from "@/lib/utils";
 import { getPageCount } from "@/lib/pdf";
 
@@ -161,6 +161,9 @@ export function UploadScreen({
         </span>
         <span className="absolute -bottom-1 right-5 flex h-7 w-7 items-center justify-center rounded-full bg-white text-orange-500 shadow-md ring-1 ring-orange-100">
           <MessageCircle className="h-3.5 w-3.5" />
+        </span>
+        <span className="absolute bottom-1 left-8 flex h-7 w-7 items-center justify-center rounded-full bg-white text-orange-500 shadow-md ring-1 ring-orange-100">
+          <Settings className="h-3.5 w-3.5" />
         </span>
       </div>
 
