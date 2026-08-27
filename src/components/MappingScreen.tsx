@@ -13,20 +13,20 @@ export function MappingScreen({ result }: { result: PipelineResult }) {
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <div className="flex shrink-0 border-b border-neutral-200 bg-white lg:hidden">
-        {(["questions", "answers"] as const).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setMobileTab(tab)}
-            className={`flex-1 py-3 text-sm font-semibold capitalize ${
-              mobileTab === tab
-                ? "border-b-2 border-neutral-900 text-neutral-900"
-                : "text-neutral-400"
-            }`}
-          >
-            {tab === "questions" ? "Questions" : "Answer Sheet"}
-          </button>
-        ))}
+      <div className="shrink-0 border-b border-neutral-200 bg-white p-2 lg:hidden">
+        <div className="flex rounded-xl bg-neutral-100 p-1">
+          {(["questions", "answers"] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setMobileTab(tab)}
+              className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-colors ${
+                mobileTab === tab ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-400"
+              }`}
+            >
+              {tab === "questions" ? "Questions" : "Answer Sheet"}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="flex flex-1 overflow-hidden">

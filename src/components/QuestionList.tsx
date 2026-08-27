@@ -31,20 +31,18 @@ function ScorePill({ question }: { question: GradedQuestion }) {
 
 function SummaryStrip({ summary }: { summary: GradingSummary }) {
   return (
-    <div className="mb-4 flex items-center justify-between rounded-xl bg-neutral-900 px-4 py-3 text-white">
+    <div className="mb-4 flex flex-col gap-2 rounded-2xl border border-neutral-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
       <div>
-        <p className="text-xs text-neutral-400">Grading Summary</p>
-        <p className="text-lg font-bold">
+        <p className="text-xs font-medium text-neutral-400">Grading Summary</p>
+        <p className="text-lg font-bold text-neutral-900">
           {summary.totalAwarded} / {summary.totalPossible}{" "}
-          <span className="text-sm font-normal text-neutral-400">
-            ({summary.percentage.toFixed(0)}%)
-          </span>
+          <span className="text-sm font-normal text-neutral-400">({summary.percentage.toFixed(0)}%)</span>
         </p>
       </div>
-      <div className="flex gap-3 text-xs">
-        <span className="text-emerald-400">{summary.counts.correct} correct</span>
-        <span className="text-amber-400">{summary.counts.partial} partial</span>
-        <span className="text-red-400">{summary.counts.incorrect} incorrect</span>
+      <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs font-medium">
+        <span className="text-emerald-600">{summary.counts.correct} correct</span>
+        <span className="text-amber-600">{summary.counts.partial} partial</span>
+        <span className="text-red-500">{summary.counts.incorrect} incorrect</span>
         <span className="text-neutral-400">{summary.counts.unanswered} unanswered</span>
       </div>
     </div>
@@ -64,8 +62,19 @@ export function QuestionList({
   selectedKey: string | null;
   onSelect: (key: string) => void;
 }) {
-  const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
   const [showUnmatched, setShowUnmatched] = useState(false);
+
+  const allExpanded = expandedKeys.size >= questions.length && questions.length > 0;
+
+  const toggleOne = (key: string) => {
+    setExpandedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -74,6 +83,15 @@ export function QuestionList({
           <h2 className="text-sm font-semibold text-neutral-500">
             Extracted Questions (from question paper)
           </h2>
+          <button
+            type="button"
+            onClick={() =>
+              setExpandedKeys(allExpanded ? new Set() : new Set(questions.map((q) => q.key)))
+            }
+            className="shrink-0 text-xs font-semibold text-neutral-500 hover:text-neutral-800"
+          >
+            {allExpanded ? "Collapse All" : "Expand All"}
+          </button>
         </div>
         <SummaryStrip summary={summary} />
       </div>
@@ -81,7 +99,7 @@ export function QuestionList({
       <div className="flex-1 space-y-3 overflow-y-auto px-4 pb-4 sm:px-5">
         {questions.map((q) => {
           const isSelected = selectedKey === q.key;
-          const isExpanded = expandedKey === q.key;
+          const isExpanded = expandedKeys.has(q.key);
           return (
             <div
               key={q.key}
@@ -94,14 +112,16 @@ export function QuestionList({
                 type="button"
                 onClick={() => {
                   onSelect(q.key);
-                  setExpandedKey(isExpanded ? null : q.key);
+                  toggleOne(q.key);
                 }}
                 className="flex w-full items-start gap-3 px-4 py-3 text-left"
               >
                 <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-neutral-900 text-xs font-semibold text-white">
                   {q.number}
-                  {q.subpart ?? ""}
                 </span>
+                {q.subpart && (
+                  <span className="mt-1 shrink-0 text-sm font-semibold text-neutral-500">{q.subpart}.</span>
+                )}
                 <span className="min-w-0 flex-1 text-sm font-medium text-neutral-800">{q.text}</span>
                 <ScorePill question={q} />
                 {isExpanded ? (
@@ -111,9 +131,9 @@ export function QuestionList({
                 )}
               </button>
               {isExpanded && (
-                <div className="border-t border-orange-200 bg-orange-50/60 px-4 py-3">
-                  <p className="mb-1 text-xs font-semibold text-orange-700">AI Feedback</p>
-                  <p className="text-sm text-neutral-700">{q.feedback ?? "No feedback available."}</p>
+                <div className="border-t border-orange-200 px-4 py-3">
+                  <p className="mb-1 text-xs font-semibold text-neutral-900">AI Feedback</p>
+                  <p className="text-sm text-neutral-600">{q.feedback ?? "No feedback available."}</p>
                   {q.rubric.length > 0 && (
                     <ul className="mt-2 space-y-1 text-xs text-neutral-500">
                       {q.rubric.map((r, i) => (

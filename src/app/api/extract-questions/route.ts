@@ -12,7 +12,7 @@ Extract every question in the exact order they appear on the page, including eve
 For each entry capture:
 - number: the main printed question number, e.g. "11".
 - subpart: the printed sub-part label, e.g. "a" — or null if this question has no lettered sub-parts.
-- text: the full question text (excluding the printed number/label itself). If a question has a shared preamble/scenario followed by lettered sub-questions, repeat the shared preamble inside EACH sub-part's text so every entry is self-contained and gradable on its own.
+- text: the specific instruction/question text for that entry (excluding the printed number/label itself), including any short quoted excerpt or line the entry itself refers to (e.g. a quoted sentence, an assertion/reason pair, a data table). If a SHORT shared scenario (one or two sentences, e.g. "A diagram shows two potted plants...") precedes several lettered sub-questions, repeat that short scenario inside each sub-part's text so each entry is self-contained. Do NOT do this for a long shared reading passage/comprehension text (multiple paragraphs) — in that case leave the passage out of every sub-question's text entirely; each sub-question's own text plus its paragraph reference (e.g. "Paragraph (1)") is enough, and repeating a multi-paragraph passage into every sub-question would make the extracted list unreadable.
 - maxMarks: the marks printed for that specific entry (e.g. from "[2]" or "(5 marks)") if shown, else null. If a shared max-marks value applies to multiple sub-parts, and it isn't clear how it splits, put the total against the first sub-part and null for the rest.
 - page: the 1-indexed page number the question appears on.
 

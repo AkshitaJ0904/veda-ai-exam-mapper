@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { ArrowRight, FileText, GraduationCap, Upload, X } from "lucide-react";
+import { ArrowRight, BookOpen, Clock, FileText, GraduationCap, MessageCircle, Upload, X } from "lucide-react";
 import { formatBytes } from "@/lib/utils";
 import { getPageCount } from "@/lib/pdf";
 
@@ -149,10 +149,19 @@ export function UploadScreen({
       </h1>
       <p className="mt-3 text-sm text-neutral-500 sm:text-base">Upload both files to get started</p>
 
-      <div className="relative my-8 flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-b from-orange-100 to-orange-50">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-sm">
-          <GraduationCap className="h-8 w-8 text-orange-500" />
+      <div className="relative my-10 flex h-32 w-32 items-center justify-center rounded-full bg-gradient-to-b from-orange-100 to-orange-50/60">
+        <div className="flex h-24 w-24 items-center justify-center rounded-full border-4 border-white bg-gradient-to-b from-neutral-100 to-neutral-50 shadow-sm">
+          <GraduationCap className="h-10 w-10 text-orange-500" />
         </div>
+        <span className="absolute -top-1 right-1 flex h-7 w-7 items-center justify-center rounded-full bg-white text-orange-500 shadow-md ring-1 ring-orange-100">
+          <Clock className="h-3.5 w-3.5" />
+        </span>
+        <span className="absolute left-0 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-white text-orange-500 shadow-md ring-1 ring-orange-100">
+          <BookOpen className="h-3.5 w-3.5" />
+        </span>
+        <span className="absolute -bottom-1 right-5 flex h-7 w-7 items-center justify-center rounded-full bg-white text-orange-500 shadow-md ring-1 ring-orange-100">
+          <MessageCircle className="h-3.5 w-3.5" />
+        </span>
       </div>
 
       <div className="flex w-full max-w-3xl flex-col gap-4 sm:flex-row">

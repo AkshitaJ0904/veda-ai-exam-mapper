@@ -40,6 +40,8 @@ export default function Home() {
   const [loadingMessage, setLoadingMessage] = useState("Extracting…");
   const [result, setResult] = useState<PipelineResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  const sidebarCollapsed = stage !== "upload" && !sidebarExpanded;
 
   const handleStart = async (questionFile: File, answerFile: File) => {
     setError(null);
@@ -91,9 +93,18 @@ export default function Home() {
 
   return (
     <div className="flex h-screen bg-neutral-50">
-      <Sidebar />
+      <Sidebar collapsed={sidebarCollapsed} onExpand={() => setSidebarExpanded(true)} />
       <div className="flex flex-1 flex-col overflow-hidden">
-        <TopBar onBack={stage === "mapping" ? () => setStage("upload") : undefined} />
+        <TopBar
+          onBack={
+            stage === "mapping"
+              ? () => {
+                  setStage("upload");
+                  setSidebarExpanded(false);
+                }
+              : undefined
+          }
+        />
         {error && (
           <div className="shrink-0 bg-red-50 px-4 py-2 text-center text-sm font-medium text-red-600">
             {error}

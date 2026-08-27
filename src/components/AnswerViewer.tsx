@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Minus, Plus } from "lucide-react";
-import type { GradedQuestion, PageImage } from "@/lib/types";
+import type { AnswerRegion, GradedQuestion, PageImage } from "@/lib/types";
 
 function bboxStyle(bbox: [number, number, number, number]) {
   const [ymin, xmin, ymax, xmax] = bbox;
@@ -21,23 +21,53 @@ export function AnswerViewer({
   pages: PageImage[];
   selectedQuestion: GradedQuestion | null;
 }) {
-  const [currentPage, setCurrentPage] = useState(1);
   const [zoom, setZoom] = useState(100);
-  const [trackedKey, setTrackedKey] = useState(selectedQuestion?.key);
+  const [currentPage, setCurrentPage] = useState(1);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const pageRefs = useRef(new Map<number, HTMLDivElement>());
 
-  if (selectedQuestion?.key !== trackedKey) {
-    setTrackedKey(selectedQuestion?.key);
+  const regionsByPage = useMemo(() => {
+    const map = new Map<number, AnswerRegion[]>();
+    for (const region of selectedQuestion?.answer?.regions ?? []) {
+      const list = map.get(region.page) ?? [];
+      list.push(region);
+      map.set(region.page, list);
+    }
+    return map;
+  }, [selectedQuestion]);
+
+  const scrollToPage = (pageNum: number) => {
+    pageRefs.current.get(pageNum)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  // Track which page is most visible while the teacher scrolls, to keep the "Page X of Y" label honest.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        let best: { page: number; ratio: number } | null = null;
+        for (const entry of entries) {
+          const page = Number((entry.target as HTMLElement).dataset.page);
+          if (entry.intersectionRatio > (best?.ratio ?? 0)) best = { page, ratio: entry.intersectionRatio };
+        }
+        if (best) setCurrentPage(best.page);
+      },
+      { root: container, threshold: [0.25, 0.5, 0.75] },
+    );
+    pageRefs.current.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [pages]);
+
+  // Jump to the answer's first page whenever the selected question changes.
+  useEffect(() => {
     const firstRegionPage = selectedQuestion?.answer?.regions[0]?.page;
-    if (firstRegionPage) setCurrentPage(firstRegionPage);
-  }
+    if (firstRegionPage) scrollToPage(firstRegionPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedQuestion?.key]);
 
-  const page = pages.find((p) => p.page === currentPage) ?? pages[0];
-  const regionsOnPage =
-    selectedQuestion?.answer?.regions.filter((r) => r.page === currentPage) ?? [];
-  const otherPagesForAnswer =
-    selectedQuestion?.answer?.regions.filter((r) => r.page !== currentPage).map((r) => r.page) ?? [];
-
-  if (!page) return null;
+  const answerPages = selectedQuestion?.answer?.regions.map((r) => r.page) ?? [];
+  const spansMultiplePages = new Set(answerPages).size > 1;
 
   return (
     <div className="flex h-full flex-col bg-neutral-900">
@@ -63,7 +93,7 @@ export function AnswerViewer({
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              onClick={() => scrollToPage(Math.max(1, currentPage - 1))}
               className="rounded p-1 hover:bg-neutral-800 disabled:opacity-30"
               disabled={currentPage <= 1}
               aria-label="Previous page"
@@ -74,7 +104,7 @@ export function AnswerViewer({
               Page {currentPage} of {pages.length}
             </span>
             <button
-              onClick={() => setCurrentPage((p) => Math.min(pages.length, p + 1))}
+              onClick={() => scrollToPage(Math.min(pages.length, currentPage + 1))}
               className="rounded p-1 hover:bg-neutral-800 disabled:opacity-30"
               disabled={currentPage >= pages.length}
               aria-label="Next page"
@@ -85,33 +115,46 @@ export function AnswerViewer({
         </div>
       </div>
 
-      {otherPagesForAnswer.length > 0 && (
+      {spansMultiplePages && (
         <div className="shrink-0 bg-amber-500/10 px-4 py-1.5 text-center text-xs text-amber-300">
-          This answer continues on page{otherPagesForAnswer.length > 1 ? "s" : ""}{" "}
-          {otherPagesForAnswer.join(", ")}
+          This answer spans pages {[...new Set(answerPages)].join(", ")}
         </div>
       )}
 
-      <div className="flex-1 overflow-auto p-6">
-        <div
-          className="relative mx-auto bg-white shadow-xl"
-          style={{ width: `${zoom}%`, maxWidth: "none" }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element -- data URL, variable size, already client-rasterized */}
-          <img src={page.dataUrl} alt={`Answer sheet page ${page.page}`} className="block w-full" draggable={false} />
-          {regionsOnPage.map((region, i) => (
+      <div ref={containerRef} className="flex-1 space-y-6 overflow-auto p-6">
+        {pages.map((page) => (
+          <div key={page.page} className="mx-auto" style={{ width: `${zoom}%`, maxWidth: "none" }}>
+            <p className="mb-1.5 text-xs font-medium text-neutral-500">Page {page.page}</p>
             <div
-              key={i}
-              className="absolute rounded-md border-2 border-emerald-400 bg-emerald-400/10"
-              style={bboxStyle(region.bbox)}
+              ref={(el) => {
+                if (el) pageRefs.current.set(page.page, el);
+                else pageRefs.current.delete(page.page);
+              }}
+              data-page={page.page}
+              className="relative bg-white shadow-xl"
             >
-              <span className="absolute -top-6 left-0 rounded-md bg-emerald-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                Q{selectedQuestion?.number}
-                {selectedQuestion?.subpart ?? ""}
-              </span>
+              {/* eslint-disable-next-line @next/next/no-img-element -- data URL, variable size, already client-rasterized */}
+              <img
+                src={page.dataUrl}
+                alt={`Answer sheet page ${page.page}`}
+                className="block w-full"
+                draggable={false}
+              />
+              {(regionsByPage.get(page.page) ?? []).map((region, i) => (
+                <div
+                  key={i}
+                  className="absolute rounded-md border-2 border-emerald-400 bg-emerald-400/10"
+                  style={bboxStyle(region.bbox)}
+                >
+                  <span className="absolute -top-6 left-0 rounded-md bg-emerald-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                    Q{selectedQuestion?.number}
+                    {selectedQuestion?.subpart ?? ""}
+                  </span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
     </div>
   );
