@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import {
   ChevronsRight,
   ClipboardList,
@@ -8,7 +9,6 @@ import {
   PanelLeft,
   PieChart,
   Presentation,
-  School,
   Settings,
   Sparkles,
 } from "lucide-react";
@@ -62,10 +62,10 @@ export function Sidebar({
         </nav>
 
         <div
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"
+          className="relative flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50"
           title="Delhi Public School"
         >
-          <School className="h-[18px] w-[18px]" />
+          <Image src="/dps-logo.png" alt="Delhi Public School" fill sizes="36px" className="object-contain p-1" />
         </div>
         <button
           onClick={onExpand}
@@ -129,8 +129,8 @@ export function Sidebar({
           Settings
         </a>
         <div className="flex items-center gap-3 rounded-xl bg-neutral-50 px-3 py-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-            <School className="h-[18px] w-[18px]" />
+          <div className="relative h-9 w-9 shrink-0 rounded-full bg-emerald-50">
+            <Image src="/dps-logo.png" alt="Delhi Public School" fill sizes="36px" className="object-contain p-1" />
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-neutral-900">Delhi Public School</p>
