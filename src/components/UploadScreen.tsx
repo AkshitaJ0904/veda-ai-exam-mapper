@@ -141,7 +141,7 @@ export function UploadScreen({
   const canStart = !!questionSlot && !!answerSlot;
 
   return (
-    <div className="flex flex-1 flex-col items-center px-4 py-10 sm:py-16">
+    <div className="flex flex-1 flex-col items-center overflow-y-auto px-4 py-10 sm:py-16">
       <h1 className="text-center text-2xl font-bold text-neutral-900 sm:text-[34px]">
         Upload{" "}
         <span className="rounded-lg bg-orange-100 px-2 py-1 text-orange-600 underline decoration-orange-400 underline-offset-4">
