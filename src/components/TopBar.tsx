@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, Bell, ClipboardList, HelpCircle, Sparkles } from "lucide-react";
+import { MobileSidebar } from "@/components/MobileSidebar";
 
 export function TopBar({ onBack }: { onBack?: () => void }) {
   return (
@@ -31,6 +32,7 @@ export function TopBar({ onBack }: { onBack?: () => void }) {
           </div>
           <span className="hidden text-sm font-medium text-neutral-800 md:inline">Madhur Rastogi</span>
         </div>
+        <MobileSidebar />
       </div>
     </header>
   );
